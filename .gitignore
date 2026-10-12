@@ -14,7 +14,9 @@ venv.bak/
 
 # ビルド・パッケージ中間成果物
 build/
+build*/
 dist/
+dist*/
 *.manifest
 *.spec.bak
 *.egg-info/
@@ -43,4 +45,5 @@ Thumbs.db
 # 配布・レビュー用アーカイブ
 *.zip
 *.tar.gz
+!docs/licenses/pystray-v0.19.5.tar.gz
 *.7z

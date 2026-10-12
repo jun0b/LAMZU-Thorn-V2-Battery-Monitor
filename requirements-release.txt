@@ -1,0 +1,29 @@
+# ==============================================================================
+# LAMZU Thorn V2 Battery Monitor - Release Build Dependencies
+# Target Platform: Windows 11 64-bit (x64 / AMD64)
+# Target Python  : Python 3.13 (CPython 64-bit)
+#
+# このファイルは、GitHub Releases向け公式OneFile EXEの再現可能なビルドおよび
+# 改変版ライブラリを用いた再結合・再ビルドを行うための固定依存定義です。
+# 開発・実行用の最小依存定義は requirements.txt を参照してください。
+# ==============================================================================
+
+# --- アプリケーション実行時依存 (Runtime Dependencies) ---
+hidapi==0.15.0
+pystray==0.19.5
+Pillow==12.1.0
+winotify==1.1.0
+psutil==7.2.1
+
+# --- 実行時間接依存 (Indirect Runtime Dependencies) ---
+six==1.17.0
+pywin32==311
+
+# --- バイナリビルド依存 (Build & Packaging Dependencies) ---
+pyinstaller==6.18.0
+pyinstaller-hooks-contrib==2025.11
+setuptools==80.9.0
+packaging==25.0
+altgraph==0.17.5
+pefile==2024.8.26
+pywin32-ctypes==0.2.3
