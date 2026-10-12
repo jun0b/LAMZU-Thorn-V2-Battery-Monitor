@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.venv*/
+ENV/
+env.bak/
+venv.bak/
+
+# ビルド・パッケージ中間成果物
+build/
+dist/
+*.manifest
+*.spec.bak
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ログ・実行時一時ファイル
+logs/
+*.log
+*.tmp
+
+# 設定・ローカルキャッシュ
+config.json
+.cache/
+.pytest_cache/
+
+# IDE / エディター
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 配布・レビュー用アーカイブ
+*.zip
+*.tar.gz
+*.7z
