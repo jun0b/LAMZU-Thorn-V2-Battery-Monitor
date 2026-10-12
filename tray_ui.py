@@ -85,6 +85,7 @@ class TrayUI:
         self._last_icon_style: str = self.icon_style
         self._last_stale_state: bool = False
         self._last_disconn_state: bool = False
+        self._last_icon_charging: bool = False
 
         # メニュー更新抑制用キャッシュ
         self._last_menu_percent: Optional[int] = None
@@ -291,6 +292,7 @@ class TrayUI:
 
         is_stale = (self.state.receive_state == ReceiveState.SLEEP_SUSPECTED)
         is_disconnected = (not self.state.dongle_available or self.state.receive_state == ReceiveState.DONGLE_DISCONNECTED)
+        is_charging = (self.state.is_charging and not is_stale and not is_disconnected)
         current_percent = self.state.percent
         current_state = self.state.receive_state
 
@@ -300,7 +302,8 @@ class TrayUI:
             self._last_icon_percent != current_percent or
             self._last_icon_style != self.icon_style or
             self._last_stale_state != is_stale or
-            self._last_disconn_state != is_disconnected
+            self._last_disconn_state != is_disconnected or
+            self._last_icon_charging != is_charging
         )
 
         # メニュー再構築が必要か判定 (残量や通信状態が変化したときのみ更新)
@@ -316,12 +319,14 @@ class TrayUI:
                     style=self.icon_style,
                     size=self._get_icon_size(),
                     is_stale=is_stale,
-                    is_disconnected=is_disconnected
+                    is_disconnected=is_disconnected,
+                    is_charging=is_charging
                 )
                 self._last_icon_percent = current_percent
                 self._last_icon_style = self.icon_style
                 self._last_stale_state = is_stale
                 self._last_disconn_state = is_disconnected
+                self._last_icon_charging = is_charging
 
             # ツールチップ（ホバー表示）の更新
             self._icon.title = self.state.get_tooltip_text()

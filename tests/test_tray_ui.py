@@ -6,7 +6,7 @@
 
 import unittest
 from unittest.mock import MagicMock
-from battery_state import BatteryState, ReceiveState
+from battery_state import BatteryState, ReceiveState, ChargingState
 from tray_ui import TrayUI
 
 
@@ -141,6 +141,78 @@ class TestTrayUI(unittest.TestCase):
         # 3. テスト通知実行
         ui._handle_send_test_notification(mock_icon, test_item)
         mock_notif_manager.send_test_notification.assert_called_once()
+
+    def test_charging_state_change_triggers_icon_redraw(self):
+        """残量が同一でも充電状態が変化した際にアイコンが再描画されることの検証"""
+        state = BatteryState()
+        state.set_dongle_available(True)
+        state.update_battery(80, status_code=0x00, charging_state=ChargingState.NOT_CHARGING)  # 非充電 (80%)
+        ui = TrayUI(state)
+
+        mock_icon = MagicMock()
+        icon_setter = unittest.mock.PropertyMock()
+        type(mock_icon).icon = icon_setter
+        ui._icon = mock_icon
+        ui._is_running = True
+
+        # 初回UI更新
+        ui.update_ui()
+        self.assertEqual(icon_setter.call_count, 1)
+        self.assertFalse(ui._last_icon_charging)
+
+        # 同一状態のまま再呼び出し（再描画されないことの検証）
+        ui.update_ui()
+        self.assertEqual(icon_setter.call_count, 1)
+
+        # 残量は80%のまま充電中に変化 (status_code=0x04, charging_state=CHARGING)
+        state.update_battery(80, status_code=0x04, charging_state=ChargingState.CHARGING)
+        ui.update_ui()
+
+        # 充電状態が変化したためアイコンが再描画されること
+        self.assertEqual(icon_setter.call_count, 2)
+        self.assertTrue(ui._last_icon_charging)
+
+        # ケーブル取り外しで非充電 (status_code=0x00, charging_state=NOT_CHARGING) に戻った場合
+        state.update_battery(80, status_code=0x00, charging_state=ChargingState.NOT_CHARGING)
+        ui.update_ui()
+        self.assertEqual(icon_setter.call_count, 3)
+        self.assertFalse(ui._last_icon_charging)
+
+    def test_unchanged_charging_state_suppresses_redraw(self):
+        """充電状態および残量が変化しない場合は再描画が抑制されることの検証"""
+        state = BatteryState()
+        state.set_dongle_available(True)
+        state.update_battery(100, status_code=0x04, charging_state=ChargingState.CHARGING)  # 充電中 (100%)
+        ui = TrayUI(state)
+
+        mock_icon = MagicMock()
+        icon_setter = unittest.mock.PropertyMock()
+        type(mock_icon).icon = icon_setter
+        ui._icon = mock_icon
+        ui._is_running = True
+
+        # 1回目の更新
+        ui.update_ui()
+        self.assertEqual(icon_setter.call_count, 1)
+        self.assertTrue(ui._last_icon_charging)
+
+        # 2回目の更新（状態変化なし）
+        ui.update_ui()
+        self.assertEqual(icon_setter.call_count, 1)
+
+    def test_demo_mode_charging_state(self):
+        """デモモードでも充電状態が正常に反映されエラーなくトレイUIが更新されることの検証"""
+        state = BatteryState(is_demo_mode=True)
+        state.set_dongle_available(True)
+        state.update_battery(75, status_code=0x04, charging_state=ChargingState.CHARGING)
+        ui = TrayUI(state)
+        mock_icon = MagicMock()
+        ui._icon = mock_icon
+        ui._is_running = True
+
+        ui.update_ui()
+        self.assertTrue(ui._last_icon_charging)
+        self.assertIn("[DEMO]", mock_icon.title)
 
 
 if __name__ == "__main__":
