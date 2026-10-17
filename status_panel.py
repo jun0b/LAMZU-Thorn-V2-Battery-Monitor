@@ -99,6 +99,7 @@ class StatusPanel:
     DOT_INACTIVE = "#484848"      # 非アクティブドット灰
 
     # 残量カラー
+    COLOR_CYAN = "#00D2FF"        # 充電完了 (水色/シアン)
     COLOR_GREEN = "#2ECC71"       # 51〜100%
     COLOR_ORANGE = "#F39C12"      # 21〜50%
     COLOR_RED = "#E74C3C"         # 0〜20% / 切断
@@ -165,12 +166,19 @@ class StatusPanel:
         # クリックイベント
         self.canvas.bind("<Button-1>", lambda e: self.canvas.focus_set())
 
-    def _get_gauge_color(self, percent: Optional[int], is_disconnected: bool) -> str:
-        """残量に応じた色を返却 (統一しきい値)"""
+    def _get_gauge_color(
+        self,
+        percent: Optional[int],
+        is_disconnected: bool,
+        is_charging_complete: bool = False
+    ) -> str:
+        """残量および充電完了状態に応じた色を返却 (統一しきい値)"""
         if is_disconnected:
             return self.COLOR_RED
         if percent is None:
             return self.COLOR_GRAY
+        if is_charging_complete:
+            return self.COLOR_CYAN
         if percent > 50:
             return self.COLOR_GREEN
         if percent > 20:
@@ -221,6 +229,7 @@ class StatusPanel:
         is_disconnected = cur.is_disconnected if cur else False
         is_stale = cur.is_stale if cur else False
         is_charging = cur.is_charging if cur else False
+        is_charging_complete = cur.is_charging_complete if cur else False
         if (
             cur
             and cur.last_valid_battery_at is not None
@@ -232,8 +241,8 @@ class StatusPanel:
         else:
             last_updated_str = "なし"
 
-        # 2. バッテリー残量数値 (中央大文字) および 充電中⚡アイコン
-        gauge_color = self._get_gauge_color(percent, is_disconnected)
+        # 2. バッテリー残量数値 (中央大文字) および 充電中/充電完了⚡アイコン
+        gauge_color = self._get_gauge_color(percent, is_disconnected, is_charging_complete)
         if is_disconnected:
             percent_text = "切断"
             val_font = ("Segoe UI", 20, "bold")
@@ -252,8 +261,8 @@ class StatusPanel:
             font=val_font
         )
 
-        # 充電中のみ⚡アイコンを配置（数字と合わせた領域を美しく中央配置）
-        if is_charging and not is_disconnected:
+        # 充電中または充電完了時は⚡アイコンを配置（数字と合わせた領域を美しく中央配置）
+        if (is_charging or is_charging_complete) and not is_disconnected:
             bbox = self.canvas.bbox(text_id)
             if bbox:
                 text_w = bbox[2] - bbox[0]
@@ -313,6 +322,9 @@ class StatusPanel:
         elif is_stale and percent is not None:
             status_text = "● スリープの可能性（通信途絶）"
             status_color = self.COLOR_ORANGE
+        elif is_charging_complete:
+            status_text = "● 接続中・充電完了"
+            status_color = self.COLOR_CYAN
         elif is_charging:
             status_text = "● 接続中・充電中"
             status_color = self.COLOR_GREEN

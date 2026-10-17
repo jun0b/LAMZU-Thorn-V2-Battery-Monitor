@@ -19,9 +19,10 @@ class PacketType(Enum):
 
 class ChargingState(Enum):
     """充電状態の定義"""
-    UNKNOWN = "UNKNOWN"          # 不明・判定不能
-    NOT_CHARGING = "NOT_CHARGING"# 非充電（通常使用中）
-    CHARGING = "CHARGING"        # 充電中
+    UNKNOWN = "UNKNOWN"                    # 不明・判定不能
+    NOT_CHARGING = "NOT_CHARGING"          # 非充電（通常使用中）
+    CHARGING = "CHARGING"                  # 充電中
+    CHARGING_COMPLETE = "CHARGING_COMPLETE"# 充電完了（満充電）
 
 
 @dataclass
@@ -46,7 +47,7 @@ class ParsedPacket:
             case 0x00:
                 return "通常動作 / 非充電 (0x00)"
             case 0x02:
-                return "遷移・未確定状態 (0x02)"
+                return "充電完了 (0x02)"
             case 0x04:
                 return "充電中 (0x04)"
             case _:
@@ -142,6 +143,8 @@ def parse_packet(raw_input: Union[bytes, bytearray, List[int]]) -> ParsedPacket:
         # 充電状態の判定 (実機通信検証に基づく)
         if status_code == 0x04:
             charging_state = ChargingState.CHARGING
+        elif status_code == 0x02:
+            charging_state = ChargingState.CHARGING_COMPLETE
         elif status_code == 0x00:
             charging_state = ChargingState.NOT_CHARGING
         else:

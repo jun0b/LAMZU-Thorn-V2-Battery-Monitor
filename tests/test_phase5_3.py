@@ -28,6 +28,18 @@ class TestPhase53ChargingProtocol(unittest.TestCase):
         self.assertEqual(parsed.charging_state, ChargingState.CHARGING)
         self.assertIn("充電中", parsed.get_status_description())
 
+    def test_format_a_charging_complete_detected(self):
+        """形式Aパケットでstatus_code=0x02の時にCHARGING_COMPLETEと判定されること"""
+        # 実機ログ: 04 38 02 02 58 64 00 A5 D1 (残量100%)
+        raw = [4, 56, 2, 2, 88, 100, 0, 165, 209]
+        parsed = parse_packet(raw)
+        self.assertEqual(parsed.packet_type, PacketType.FORMAT_A)
+        self.assertTrue(parsed.is_valid_battery)
+        self.assertEqual(parsed.battery_level, 100)
+        self.assertEqual(parsed.status_code, 0x02)
+        self.assertEqual(parsed.charging_state, ChargingState.CHARGING_COMPLETE)
+        self.assertIn("充電完了", parsed.get_status_description())
+
     def test_format_a_not_charging_detected(self):
         """形式Aパケットでstatus_code=0x00の時にNOT_CHARGINGと判定されること"""
         # 実機ログ: 04 38 03 00 54 5E 00 A5 D1 (残量94%)
@@ -96,6 +108,25 @@ class TestPhase53BatteryStateTransitions(unittest.TestCase):
         self.assertEqual(self.state.percent, 95)
         self.assertEqual(self.state.charging_state, ChargingState.CHARGING)
         self.assertTrue(self.state.is_charging)
+        self.assertFalse(self.state.is_charging_complete)
+
+    def test_charging_complete_state_update_and_format_b_preservation(self):
+        """充電完了(CHARGING_COMPLETE)の反映と、形式B(CHARGING)受信時に上書きされないことの検証"""
+        self.state.update_battery(100, status_code=0x02, charging_state=ChargingState.CHARGING_COMPLETE)
+        self.assertEqual(self.state.percent, 100)
+        self.assertEqual(self.state.charging_state, ChargingState.CHARGING_COMPLETE)
+        self.assertTrue(self.state.is_charging_complete)
+        self.assertFalse(self.state.is_charging)
+
+        # 形式Bの充電フラグ(CHARGING)が届いてもCHARGING_COMPLETEが維持されること
+        self.state.update_non_battery_packet(charging_state=ChargingState.CHARGING)
+        self.assertTrue(self.state.is_charging_complete)
+        self.assertEqual(self.state.charging_state, ChargingState.CHARGING_COMPLETE)
+
+        # 形式Bの非充電フラグ(NOT_CHARGING)が届いた場合はNOT_CHARGINGへ遷移すること
+        self.state.update_non_battery_packet(charging_state=ChargingState.NOT_CHARGING)
+        self.assertFalse(self.state.is_charging_complete)
+        self.assertEqual(self.state.charging_state, ChargingState.NOT_CHARGING)
 
     def test_not_charging_state_update(self):
         """非充電状態への更新とis_chargingがFalseになること"""
@@ -170,6 +201,26 @@ class TestPhase53StatusPanelLightningUI(unittest.TestCase):
         texts = [self.panel.canvas.itemcget(i, "text") for i in items if self.panel.canvas.type(i) == "text"]
         self.assertIn("● 接続中・充電中", texts)
 
+    def test_cyan_and_lightning_bolt_rendered_when_charging_complete(self):
+        """充電完了(CHARGING_COMPLETE)のとき水色/シアン表示と⚡アイコンが両立すること"""
+        self.state.update_battery(100, status_code=0x02, charging_state=ChargingState.CHARGING_COMPLETE)
+        self.panel.show(self.state)
+        self.root.update()
+
+        # ⚡アイコンが描画されていること
+        bolts = self.panel.canvas.find_withtag("lightning_bolt")
+        self.assertEqual(len(bolts), 1)
+
+        # 状態テキストが「● 接続中・充電完了」であり、色がCOLOR_CYAN (#00D2FF) であること
+        items = self.panel.canvas.find_all()
+        text_items = {
+            self.panel.canvas.itemcget(i, "text"): self.panel.canvas.itemcget(i, "fill")
+            for i in items if self.panel.canvas.type(i) == "text"
+        }
+        self.assertIn("● 接続中・充電完了", text_items)
+        self.assertEqual(text_items["● 接続中・充電完了"], StatusPanel.COLOR_CYAN)
+        self.assertEqual(text_items["100%"], StatusPanel.COLOR_CYAN)
+
     def test_no_lightning_bolt_when_not_charging(self):
         """非充電(NOT_CHARGING)のとき⚡アイコンが描画されないこと"""
         self.state.update_battery(95, status_code=0x00, charging_state=ChargingState.NOT_CHARGING)
@@ -186,7 +237,7 @@ class TestPhase53StatusPanelLightningUI(unittest.TestCase):
 
     def test_no_lightning_bolt_when_unknown(self):
         """充電状態不明(UNKNOWN)のとき⚡アイコンが描画されないこと"""
-        self.state.update_battery(95, status_code=0x02, charging_state=ChargingState.UNKNOWN)
+        self.state.update_battery(95, status_code=0x99, charging_state=ChargingState.UNKNOWN)
         self.panel.show(self.state)
         self.root.update()
 

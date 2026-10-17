@@ -83,6 +83,14 @@ class BatteryState:
                 return False
             return self.charging_state == ChargingState.CHARGING
 
+    @property
+    def is_charging_complete(self) -> bool:
+        """充電完了かどうか (正常受信中かつCHARGING_COMPLETEの場合のみTrue)"""
+        with self._lock:
+            if not self.dongle_available or self.receive_state != ReceiveState.NORMAL:
+                return False
+            return self.charging_state == ChargingState.CHARGING_COMPLETE
+
     def add_listener(self, listener: Callable[["BatteryState"], None]) -> None:
         """状態変更時に呼び出されるコールバックリスナーを登録"""
         with self._lock:
@@ -112,7 +120,7 @@ class BatteryState:
             percent: バッテリー残量 (0〜100)
             status_code: 状態コード (0x00, 0x02, 0x04 など)
             state_value: 変動状態値 (Byte 3)
-            charging_state: 充電状態 (CHARGING, NOT_CHARGING, UNKNOWN)
+            charging_state: 充電状態 (CHARGING, CHARGING_COMPLETE, NOT_CHARGING, UNKNOWN)
         """
         now = time.time()
         changed = False
@@ -155,7 +163,14 @@ class BatteryState:
 
             # セッション確立中(NORMAL状態)の場合のみ充電状態を更新
             if self.receive_state == ReceiveState.NORMAL:
+                # 形式Bは2値(CHARGING / NOT_CHARGING)のみのため、既にCHARGING_COMPLETEの場合は
+                # 形式BのCHARGINGで上書きしてチラつくのを防ぐ（NOT_CHARGINGへの遷移は反映する）
                 if (
+                    self.charging_state == ChargingState.CHARGING_COMPLETE
+                    and charging_state == ChargingState.CHARGING
+                ):
+                    pass
+                elif (
                     charging_state != ChargingState.UNKNOWN
                     and self.charging_state != charging_state
                 ):

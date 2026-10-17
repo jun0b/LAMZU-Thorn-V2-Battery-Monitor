@@ -39,6 +39,15 @@ class TestBatteryProtocol(unittest.TestCase):
         self.assertEqual(result.battery_level, 100)
         self.assertEqual(result.status_code, 0x04)
 
+    def test_charging_complete_status_code(self):
+        """充電完了時 100%・状態コード0x02の解析"""
+        raw = bytes.fromhex("38 02 02 58 64 00 a5 d1")
+        result = parse_packet(raw)
+        self.assertEqual(result.packet_type, PacketType.FORMAT_A)
+        self.assertTrue(result.is_valid_battery)
+        self.assertEqual(result.battery_level, 100)
+        self.assertEqual(result.status_code, 0x02)
+
     def test_format_b_not_zero_percent_packet1(self):
         """形式Bパケット (03 64 ...) で0%と誤認しないことの検証"""
         raw = bytes.fromhex("03 64 00 00 00 00 00 00")

@@ -62,9 +62,10 @@ def get_label_font(size: int) -> ImageFont.ImageFont:
     return get_font(size)
 
 
-def get_battery_color(percent: Optional[int]) -> Tuple[int, int, int]:
-    """残量パーセンテージに応じた色を返却 (RGB)
+def get_battery_color(percent: Optional[int], is_charging_complete: bool = False) -> Tuple[int, int, int]:
+    """残量パーセンテージおよび充電完了状態に応じた色を返却 (RGB)
 
+    - 充電完了: 水色/シアン (#00D2FF)
     - 51〜100%: 通常色 (緑系 #2ECC71)
     - 21〜50% : 注意色 (橙系 #F39C12)
     - 0〜20%  : 警告色 (赤系 #E74C3C)
@@ -72,6 +73,8 @@ def get_battery_color(percent: Optional[int]) -> Tuple[int, int, int]:
     """
     if percent is None:
         return (149, 165, 166)  # 灰色
+    if is_charging_complete:
+        return (0, 210, 255)    # 水色/シアン (充電完了)
     if percent > 50:
         return (46, 204, 113)   # 緑
     if percent > 20:
@@ -129,7 +132,8 @@ def create_battery_icon(
     size: int = 16,
     is_stale: bool = False,
     is_disconnected: bool = False,
-    is_charging: bool = False
+    is_charging: bool = False,
+    is_charging_complete: bool = False
 ) -> Image.Image:
     """バッテリー残量と数値を組み合わせたトレイ用アイコン画像を生成
 
@@ -143,6 +147,7 @@ def create_battery_icon(
         is_stale: 受信途絶・スリープ推測状態か
         is_disconnected: ドングル切断状態か
         is_charging: 充電中かどうか (正常受信中かつCHARGING判定時のみ有効)
+        is_charging_complete: 充電完了かどうか (正常受信中かつCHARGING_COMPLETE判定時のみ有効)
 
     Returns:
         Image.Image: RGBA形式のPillowイメージオブジェクト
@@ -151,8 +156,9 @@ def create_battery_icon(
     draw = ImageDraw.Draw(image)
 
     # 状態に応じたゲージ色 (全スタイル共通の統一しきい値)
-    # 51〜100%: 緑, 21〜50%: 橙, 0〜20%: 赤, 未取得: 灰
-    base_color = get_battery_color(percent)
+    # 充電完了: 水色/シアン, 51〜100%: 緑, 21〜50%: 橙, 0〜20%: 赤, 未取得: 灰
+    effective_complete = is_charging_complete and not is_disconnected and not is_stale and percent is not None
+    base_color = get_battery_color(percent, is_charging_complete=effective_complete)
     if is_disconnected:
         gauge_color = (231, 76, 60, 255)
     elif is_stale and percent is not None:
@@ -175,8 +181,8 @@ def create_battery_icon(
     s = size / 16.0  # 16pxを基準としたスケーリング比率
     norm_style = STYLE_NORMALIZATION.get(style, "numbers-battery")
 
-    # 確実に正常接続・残量取得中である場合のみ充電⚡マークを表示
-    show_charging = is_charging and not is_disconnected and not is_stale and percent is not None
+    # 確実に正常接続・残量取得中である場合のみ充電中/充電完了の⚡マークを表示
+    show_charging = (is_charging or is_charging_complete) and not is_disconnected and not is_stale and percent is not None
 
     if norm_style == "numbers-only":
         # ==========================================

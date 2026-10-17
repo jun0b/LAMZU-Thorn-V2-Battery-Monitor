@@ -197,6 +197,28 @@ class TestIconGenerator(unittest.TestCase):
                     total_pixels = sum(img.getpixel((x, y))[3] > 0 for x in range(sz) for y in range(sz))
                     self.assertGreater(total_pixels, 15)
 
+    def test_charging_complete_cyan_color_and_bolt_all_styles(self):
+        """充電完了(is_charging_complete=True)時に全3スタイルでシアン色(0, 210, 255)と⚡が描画されることの検証"""
+        self.assertEqual(get_battery_color(100, is_charging_complete=True), (0, 210, 255))
+
+        styles = ["numbers-only", "battery-only", "numbers-battery"]
+        for sty in styles:
+            img_normal = create_battery_icon(100, style=sty, size=16, is_charging=False, is_charging_complete=False)
+            img_charging = create_battery_icon(100, style=sty, size=16, is_charging=True, is_charging_complete=False)
+            img_complete = create_battery_icon(100, style=sty, size=16, is_charging=False, is_charging_complete=True)
+
+            # 通常100%とも充電中100%(緑+⚡)とも異なる画像（シアン+⚡）が生成されること
+            self.assertNotEqual(img_complete.tobytes(), img_normal.tobytes())
+            self.assertNotEqual(img_complete.tobytes(), img_charging.tobytes())
+
+            # 画像内にシアン系ピクセルと金色⚡ (255, 213, 79, 255) の両方が存在すること
+            pixels = [img_complete.getpixel((x, y)) for x in range(16) for y in range(16)]
+            has_cyan = any(r == 0 and g >= 150 and b >= 200 and a >= 200 for r, g, b, a in pixels)
+            self.assertTrue(has_cyan, f"{sty} にシアン色ピクセルが存在しません")
+            if sty in ("battery-only", "numbers-battery"):
+                self.assertIn((0, 210, 255, 255), pixels, f"{sty} のゲージに(0, 210, 255, 255)が存在しません")
+            self.assertIn((255, 213, 79, 255), pixels, f"{sty} に金色⚡ピクセルが存在しません")
+
 
 if __name__ == "__main__":
     unittest.main()

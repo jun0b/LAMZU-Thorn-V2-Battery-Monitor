@@ -214,6 +214,32 @@ class TestTrayUI(unittest.TestCase):
         self.assertTrue(ui._last_icon_charging)
         self.assertIn("[DEMO]", mock_icon.title)
 
+    def test_charging_complete_state_change_triggers_icon_redraw(self):
+        """100%充電中(0x04)から100%充電完了(0x02)へ変化した際にアイコンが再描画されることの検証"""
+        state = BatteryState()
+        state.set_dongle_available(True)
+        state.update_battery(100, status_code=0x04, charging_state=ChargingState.CHARGING)
+        ui = TrayUI(state)
+
+        mock_icon = MagicMock()
+        icon_setter = unittest.mock.PropertyMock()
+        type(mock_icon).icon = icon_setter
+        ui._icon = mock_icon
+        ui._is_running = True
+
+        # 初回更新 (充電中 100%)
+        ui.update_ui()
+        self.assertEqual(icon_setter.call_count, 1)
+        self.assertTrue(ui._last_icon_charging)
+        self.assertFalse(ui._last_icon_charging_complete)
+
+        # 残量100%のまま充電完了 (0x02) に遷移
+        state.update_battery(100, status_code=0x02, charging_state=ChargingState.CHARGING_COMPLETE)
+        ui.update_ui()
+        self.assertEqual(icon_setter.call_count, 2)
+        self.assertFalse(ui._last_icon_charging)
+        self.assertTrue(ui._last_icon_charging_complete)
+
 
 if __name__ == "__main__":
     unittest.main()
