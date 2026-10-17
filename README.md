@@ -12,7 +12,7 @@ LAMZU Thorn V2（LAMZU 8K Dongle V2 接続）のバッテリー残量をWindows�
 
 タスクトレイの右クリックメニュー（「アイコンデザイン」）から、好みに応じた3種類のデザインを即時切り替え可能です。
 
-| デザイン | 通常時 (85%) | 充電中 (⚡ 85%) | 充電完了 (⚡ 100%) | 特徴 |
+| デザイン | 通常時<br>(85%) | 充電中<br>(⚡85%) | 充電完了<br>(⚡100%) | 特徴 |
 | :---: | :---: | :---: | :---: | :--- |
 | **数字+バッテリー表示**<br>(デフォルト) | <img src="docs/images/design-numbers-battery-normal.png" width="32" alt="数字+バッテリー 通常時"> | <img src="docs/images/design-numbers-battery-charging.png" width="32" alt="数字+バッテリー 充電中"> | <img src="docs/images/design-numbers-battery-complete.png" width="32" alt="数字+バッテリー 充電完了"> | 上部に数値、下部に横長バッテリーゲージを併記。残量と視覚ゲージを同時に確認できます。 |
 | **数字のみ** | <img src="docs/images/design-numbers-only-normal.png" width="32" alt="数字のみ 通常時"> | <img src="docs/images/design-numbers-only-charging.png" width="32" alt="数字のみ 充電中"> | <img src="docs/images/design-numbers-only-complete.png" width="32" alt="数字のみ 充電完了"> | バッテリー外枠を排し数値を最大化。充電中は右下にゴールドの⚡マークを表示します。 |
